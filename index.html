@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Audio Visualizer</title>
+    <style>
+        body {
+            background-color: black;
+            color: green;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 8px;
+        }
+        #ascii {
+            line-height: 12px;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii"></div>
+
+    <script>
+        const asciiElement = document.getElementById("ascii");
+
+        // Capture audio from the microphone
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function (stream) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function renderAscii() {
+                    analyser.getByteFrequencyData(dataArray);
+
+                    // Clear previous ASCII frame
+                    asciiElement.innerHTML = "";
+
+                    // Generate ASCII frame based on frequency data
+                    let asciiFrame = "";
+                    for (let i = 0; i < bufferLength; i++) {
+                        const frequencyValue = dataArray[i];
+                        // Map frequency values to different ASCII characters
+                        let char = mapFrequencyToAscii(frequencyValue);
+                        asciiFrame += char;
+
+                        // Break into multiple lines to form a "shape"
+                        if (i % 16 === 0) {
+                            asciiFrame += "\n";
+                        }
+                    }
+
+                    asciiElement.innerHTML = asciiFrame;
+                    requestAnimationFrame(renderAscii);
+                }
+
+                renderAscii();
+            })
+            .catch(function (err) {
+                console.error("Error accessing the microphone: ", err);
+            });
+
+        // Function to map frequency values to ASCII characters
+        function mapFrequencyToAscii(frequency) {
+            if (frequency > 200) return "@";
+            else if (frequency > 150) return "#";
+            else if (frequency > 100) return "8";
+            else if (frequency > 75) return "&";
+            else if (frequency > 50) return "*";
+            else if (frequency > 25) return ":";
+            else return ".";
+        }
+    </script>
+</body>
+</html>
